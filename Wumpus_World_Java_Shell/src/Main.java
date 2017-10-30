@@ -52,8 +52,23 @@ public class Main
 		if ( args.length == 0 )
 		{
 			// Run on a random world and exit
+			int totalScore = 0;
 			try
 			{
+//				int i = 0;
+//				int failures = 0;
+//				while(i < 100) {
+//				World world = new World();
+//				int score = world.run();
+//				if(score <= -1000) {
+//					failures++;
+//				}
+//				totalScore += score;
+//				System.out.println ( "The agent scored: " + score );
+//				i++;
+//				}
+//				System.out.println(failures);
+//				System.out.println((double)totalScore/100.0);
 				World world = new World();
 				int score = world.run();
 				System.out.println("Your agent scored: " + score);
