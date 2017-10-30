@@ -47,6 +47,8 @@ import java.io.IOException;
 
 public class Main
 {
+	public static long seed = 1509346289483L; //System.currentTimeMillis();
+
     public static void main ( String[] args )
 	{
 		if ( args.length == 0 )
@@ -55,23 +57,22 @@ public class Main
 			int totalScore = 0;
 			try
 			{
-//				int i = 0;
-//				int failures = 0;
-//				while(i < 100) {
-//				World world = new World();
-//				int score = world.run();
-//				if(score <= -1000) {
-//					failures++;
-//				}
-//				totalScore += score;
-//				System.out.println ( "The agent scored: " + score );
-//				i++;
-//				}
-//				System.out.println(failures);
-//				System.out.println((double)totalScore/100.0);
+				int i = 0;
+				int failures = 0;
+				while(i < 100000) {
+					seed = System.currentTimeMillis();
 				World world = new World();
 				int score = world.run();
-				System.out.println("Your agent scored: " + score);
+				if(score <= -1000) {
+					System.out.println("Failure: " + seed);
+					failures++;
+				}
+				totalScore += score;
+				System.out.println ( "The agent scored: " + score );
+				i++;
+				}
+				System.out.println("Failures: " + failures);
+				System.out.println("Average score: " + (double)totalScore/100000.0);
 			}
 			catch ( Exception e )
 			{

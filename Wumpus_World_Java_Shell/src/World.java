@@ -119,11 +119,7 @@ public class World
 		else
 		{
 			long seed = System.currentTimeMillis();
-			rand = new Random(1509344195331L);
-			//1509341181257L
-			//1509336230875L
-			//1509321592573L
-			System.out.println("world" + seed);
+			rand = new Random();
 			colDimension = rand.nextInt(4) + 4;
 			rowDimension = rand.nextInt(4) + 4;
 			board = new Tile[colDimension][rowDimension];
