@@ -7,14 +7,13 @@ import java.util.Stack;
 // ======================================================================
 // FILE:        MyAI.java
 //
-// AUTHOR:      Anastasia Miles
+// AUTHOR:      TeamSweetFlips
+//					(Anastasia Miles, 90039862)
 //
-// DESCRIPTION: This file contains your my agent class.
+// DESCRIPTION: This file contains my agent class.
 //
-// NOTES:       -
+// NOTES:       
 // ======================================================================
-
-//MAKE THE MAP INIT_CAP A GLOBAL VAR
 
 public class MyAI extends Agent
 {
@@ -29,6 +28,7 @@ public class MyAI extends Agent
 		POTENTIAL,
 		UNKNOWN
 	}
+	
 	// General class for a Wumpus or a Pit
 	private class Peril {
 		public Presence present;
@@ -38,6 +38,7 @@ public class MyAI extends Agent
 		}
 		
 	}
+	
 	// A single Cell in the internal map
 	private class Cell {
 		public Peril pit;
@@ -83,7 +84,7 @@ public class MyAI extends Agent
 					this.map.get(i).add(new Cell());
 				}
 			}
-			// Starting cell is safe
+			// Starting Cell is safe
 			this.map.get(0).get(0).wumpus.present = Presence.FALSE;
 			this.map.get(0).get(0).pit.present = Presence.FALSE;
 		}
@@ -127,6 +128,7 @@ public class MyAI extends Agent
 		private final int numRep;
 		private final int rightNumRep;
 		private final int leftNumRep;
+		
 		private Direction(int num, int rightNum, int leftNum) {
 			this.numRep = num;
 			this.rightNumRep = rightNum;
@@ -135,13 +137,14 @@ public class MyAI extends Agent
 		
 		public static Direction getDirFromNum(int num) {
 			switch (num) {
-            case 0: return Direction.NORTH;
-            case 1: return Direction.EAST;
-            case 2: return Direction.SOUTH;
-            default: return Direction.WEST;
+	            case 0: return Direction.NORTH;
+	            case 1: return Direction.EAST;
+	            case 2: return Direction.SOUTH;
+	            default: return Direction.WEST;
 			}
 		}
 	}
+	
 	// Keeps track of row-column pairs
 	private class Pair {
 		public int row;
@@ -152,7 +155,7 @@ public class MyAI extends Agent
 			this.col = col;
 		}
 		
-		// For later use
+		// For future use
 		@Override
 		public int hashCode() {
 			return this.col*10 + this.row;
@@ -164,10 +167,7 @@ public class MyAI extends Agent
 				return false;
 			}
 			Pair that = (Pair) obj;
-			if((that.row == this.row && that.col == this.col)) {
-				return true;
-			}
-			return false;
+			return (that.row == this.row && that.col == this.col);
 		}
 		
 		// Returns true if p is adjacent to this
@@ -203,7 +203,7 @@ public class MyAI extends Agent
 	private boolean wumpusKilled;
 	private CaveMap map;
 	private Direction direction;
-	// So we can figure outo where the Wumpus is
+	// So we can figure out where the Wumpus is
 	private HashSet<Pair> wumpusSpottings;
 	// Bounds of the map, initially unknown
 	private int lastRow;
@@ -229,7 +229,7 @@ public class MyAI extends Agent
 		this.lastCol = -1;
 		this.pathOut = new Stack<Pair>();
 		this.currentPosition = new Pair(0, 0);
-		this.rand = new Random(Main.seed);
+		this.rand = new Random();
 	}
 	
 	public Action getAction
@@ -248,21 +248,21 @@ public class MyAI extends Agent
 			return Action.GRAB;
 		}
 		
-		// The wumpus has been killed.
+		// The Wumpus has been killed.
 		if(scream) {
-			// Update his location if it was a lucky shot from (0,)
+			// Update his location if it was a lucky shot from (0,0); we shot East
 			if(this.wumpusLocation == null) {
 				this.wumpusLocation = new Pair(0, 1);
 				
 			}
 			// Set Wumpus Presence to false so we can move there
 			this.map.getCell(this.wumpusLocation).setWumpusPresence(Presence.FALSE);
-			// If we were currently moving to backtrack, push that cell to the path
+			// If we were currently backtracking, push that target Cell to the path
 			if(this.targetDestination != null && this.map.getCellVisited(this.targetDestination)) {
 				this.pathOut.push(this.targetDestination);
 			}
 			this.wumpusKilled = true;
-			// Continue exploring, moving to the ex-Wumpus Cell
+			// Continue exploring, moving to the ex-Wumpus Cell if it's safe
 			this.retreating = false;
 			if(this.map.getCell(this.wumpusLocation).getPitPresence() == Presence.FALSE) {
 				this.targetDestination = this.wumpusLocation;
@@ -417,12 +417,9 @@ public class MyAI extends Agent
 	
 	// Checks if a cell is in bounds
 	private boolean inBounds(int row, int col) {
-		if(row < 0 || col < 0 || col > 9 || 
+		return !(row < 0 || col < 0 || col > COL_CAP - 1 || 
 				(this.lastRow != -1 && row > this.lastRow) ||
-				(this.lastCol != -1 && col > this.lastCol)) {
-			return false;
-		}
-		return true;
+				(this.lastCol != -1 && col > this.lastCol));
 	}
 	
 	// Updates adjacent Cells with information obtained from the current Cell
