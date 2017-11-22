@@ -1,7 +1,11 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 import java.util.Stack;
 
 // ======================================================================
@@ -70,6 +74,7 @@ public class MyAI extends Agent
 		public boolean isSafe() {
 			return (this.pit.present == Presence.FALSE && this.wumpus.present == Presence.FALSE);
 		}
+		
 	}
 	
 	// Map of the cave
@@ -117,6 +122,7 @@ public class MyAI extends Agent
 			}
 		}
 	}
+	
 	// Keep track of which way the agent is facing
 	private enum Direction {
 		// Each Direction has a number representation
@@ -155,7 +161,6 @@ public class MyAI extends Agent
 			this.col = col;
 		}
 		
-		// For future use
 		@Override
 		public int hashCode() {
 			return this.col*10 + this.row;
@@ -194,12 +199,55 @@ public class MyAI extends Agent
 			}
 			return false;
 		}
+		
+		// Gets all the cells surrounding the current cell
+		public Pair[] getSurroundingCells(Direction d) {
+			// Will be in order given input direction: forward, right/left, left/right, backward
+			Pair[] surroundingCells;
+			switch(d) {
+				case NORTH:
+					surroundingCells = new Pair[] {
+							new Pair(this.row + 1, this.col),
+							new Pair(this.row, this.col + 1),
+							new Pair(this.row, this.col - 1),
+							new Pair(this.row - 1, this.col)
+					};
+					return surroundingCells;
+				case SOUTH:
+					surroundingCells = new Pair[] {
+							new Pair(this.row - 1, this.col),
+							new Pair(this.row, this.col + 1),
+							new Pair(this.row, this.col - 1),
+							new Pair(this.row + 1, this.col)
+					};
+					return surroundingCells;
+				case EAST:
+					surroundingCells = new Pair[] {
+							new Pair(this.row, this.col + 1),
+							new Pair(this.row + 1, this.col),
+							new Pair(this.row - 1, this.col),
+							new Pair(this.row, this.col - 1)
+					};
+					return surroundingCells;
+				default: //case WEST, the starting direction
+					surroundingCells = new Pair[] {
+							new Pair(this.row, this.col - 1),
+							new Pair(this.row + 1, this.col),
+							new Pair(this.row - 1, this.col),
+							new Pair(this.row, this.col + 1)
+					};
+					return surroundingCells;
+			
+			}
+		}
 	}
 	
 	private boolean arrowShot;
 	private boolean goldFound;
 	// Signifies backtracking
-	private boolean retreating;
+	private boolean backtracking;
+	// Signifies leaving the cave
+	private boolean escaping;
 	private boolean wumpusKilled;
 	private CaveMap map;
 	private Direction direction;
@@ -208,28 +256,29 @@ public class MyAI extends Agent
 	// Bounds of the map, initially unknown
 	private int lastRow;
 	private int lastCol;
-	//So we can backtrack
+	// So we can backtrack
+	private Stack<Pair> pathTaken;
+	// So we can escape fast
 	private Stack<Pair> pathOut;
 	private Pair currentPosition;
-	// Where we want to move to, needs to carry if we must rotate first. Initially null
+	// Where we want to move to, needs to be saved if we must rotate first. Initially null
 	private Pair targetDestination;
 	private Pair wumpusLocation;
-	private Random rand;
 	
 	public MyAI ( )
 	{
 		this.arrowShot = false;
 		this.goldFound = false;
-		this.retreating = false;
+		this.backtracking = false;
+		this.escaping = false;
 		this.wumpusKilled = false;
 		this.map = new CaveMap();
 		this.direction = INIT_DIR;
 		this.wumpusSpottings = new HashSet<Pair>();
 		this.lastRow = -1;
 		this.lastCol = -1;
-		this.pathOut = new Stack<Pair>();
+		this.pathTaken = new Stack<Pair>();
 		this.currentPosition = new Pair(0, 0);
-		this.rand = new Random();
 	}
 	
 	public Action getAction
@@ -241,10 +290,10 @@ public class MyAI extends Agent
 		boolean scream
 	)
 	{
-		// If there's gold, grab it. Start backtracking to (0,0).
+		// If there's gold, grab it. Initiate escaping the cave
 		if(glitter) {
-			this.retreating = true;
 			this.goldFound = true;
+			this.escaping = true;
 			return Action.GRAB;
 		}
 		
@@ -257,22 +306,25 @@ public class MyAI extends Agent
 			}
 			// Set Wumpus Presence to false so we can move there
 			this.map.getCell(this.wumpusLocation).setWumpusPresence(Presence.FALSE);
-			// If we were currently backtracking, push that target Cell to the path
-			if(this.targetDestination != null && this.map.getCellVisited(this.targetDestination)) {
-				this.pathOut.push(this.targetDestination);
-			}
 			this.wumpusKilled = true;
-			// Continue exploring, moving to the ex-Wumpus Cell if it's safe
-			this.retreating = false;
-			if(this.map.getCell(this.wumpusLocation).getPitPresence() == Presence.FALSE) {
-				this.targetDestination = this.wumpusLocation;
+			// If we aren't currently escaping, we want to move to where the Wumpus was
+			if(!this.escaping) {
+				// If we were currently backtracking, push that target Cell back on the path
+				if(this.targetDestination != null && this.map.getCellVisited(this.targetDestination)) {
+					this.pathTaken.push(this.targetDestination);
+				}
+				// Continue exploring, moving to the ex-Wumpus Cell if it's safe
+				this.backtracking = false;
+				if(this.map.getCell(this.wumpusLocation).getPitPresence() == Presence.FALSE) {
+					this.targetDestination = this.wumpusLocation;
+				}
 			}
 		}
 		
 		// If we are at the start Cell (0,0)
 		if(this.currentPosition.equals(new Pair(0, 0))) {
-			// If there's a breeze here or we've found the gold, leave
-			if(this.goldFound || breeze) {
+			// If there's a breeze here, we've found the gold, or we're escaping, leave
+			if(this.goldFound || this.escaping || breeze) {
 				return Action.CLIMB;
 			// If there's a stench, take a random shot
 			} else if (!this.wumpusKilled && stench){
@@ -280,7 +332,11 @@ public class MyAI extends Agent
 					this.arrowShot = true;
 					return Action.SHOOT;
 				}
-				return Action.CLIMB;
+				// If we previously shot the arrow from (0, 0) but didn't kill the Wumpus,
+				// we know he was in (1, 0) and not (0, 1) (where we shot.
+				this.wumpusLocation = new Pair(1, 0);
+				this.map.getCell(new Pair(0, 1)).setWumpusPresence(Presence.FALSE);
+				this.map.getCell(new Pair(1, 0)).setWumpusPresence(Presence.TRUE);
 			}
 		}
 		
@@ -293,18 +349,22 @@ public class MyAI extends Agent
 				}
 			}
 			else {
+				this.lastCol = this.currentPosition.col - 1;
 				if(this.direction == Direction.EAST) {
 					this.currentPosition = new Pair(this.currentPosition.row, this.currentPosition.col - 1);
 				}
-				this.lastCol = this.currentPosition.col - 1;
+				
 			}
-			if(!this.pathOut.isEmpty()) {
-				this.pathOut.pop();
+			// To get a bump, we had to "move" out of bounds. This move was reflected in the
+			// backtracking path, so we need to remove it.
+			if(!this.pathTaken.isEmpty()) {
+				this.pathTaken.pop();
 			}
 		}
 		
 		// If we've found the Wumpus and are next to it, turn to face it and then shoot
-		if(!this.arrowShot && !this.wumpusKilled && this.wumpusLocation != null && this.wumpusLocation.isAdjacent(this.currentPosition)) {
+		// However, if we are escaping don't bother wasting the actions.
+		if (!this.escaping && !this.arrowShot && !this.wumpusKilled && this.wumpusLocation != null && this.wumpusLocation.isAdjacent(this.currentPosition)) {
 			if(this.currentPosition.isFacing(this.wumpusLocation, this.direction)) {
 				this.arrowShot = true;
 				return Action.SHOOT;
@@ -319,16 +379,29 @@ public class MyAI extends Agent
 			}
 		}
 		
-		// Update the status of adjacent cells based on the percepts in this one
-		updateAdjacentCells(breeze, stench);
-		
-		// If we don't have a scheduled destination Cell
-		if(this.targetDestination == null) {
-			// Get the adjacent Cells we can move to
-			ArrayList<Pair> openMoves = getAvailableCells();
-			// Randomly choose one
-			this.targetDestination = getTargetDestination(openMoves);
+		// If we're escaping, generate the optimal path out.
+		if (this.escaping) {
+			if(this.pathOut == null) {
+				getOptimalPathOut();
+			}
+		} else {		
+			// Update the status of adjacent cells based on the percepts in this one
+			updateAdjacentCells(breeze, stench);
 		}
+		
+		// If we don't have a scheduled destination Cell (are not in the middle of turning to face one), get one
+		if(this.targetDestination == null) {
+			if(this.escaping) {
+				this.targetDestination = this.pathOut.pop();
+			}
+			else {
+				// Get the adjacent Cells we can move to
+				ArrayList<Pair> openMoves = getAvailableCells();
+				// Choose the one requiring the least amount of turns
+				this.targetDestination = getTargetDestination(openMoves);
+			}
+		}
+		
 		// Get the required Action to move to the Cell
 		Action move = getMove(this.targetDestination);
 		// Update the internal position information with the Action
@@ -354,8 +427,8 @@ public class MyAI extends Agent
 	private void updateCurrentPosition(Action move, Pair target) {
 		this.map.setCellVisited(this.currentPosition, true);
 		if(move == Action.FORWARD) {
-			if(!this.retreating) {
-				this.pathOut.push(this.currentPosition);
+			if(!this.backtracking) {
+				this.pathTaken.push(this.currentPosition);
 			}
 			this.currentPosition = target;
 			this.targetDestination = null;
@@ -379,33 +452,33 @@ public class MyAI extends Agent
 		return rotateToFace(target);
 	}
 	
-	// Randomly chooses a target Cell from among the available moves
+	// Chooses a target Cell from among the available moves, preferring the one requiring
+	// the least amount of turns.
 	private Pair getTargetDestination(ArrayList<Pair> openMoves) {
 		// If there are no available moves or the gold is found, backtrack
 		if(openMoves.size() == 0 || this.goldFound) {
-			this.retreating = true;
-			// pathOut will only be empty at (0,0)
-			if(this.pathOut.isEmpty()) {
+			this.backtracking = true;
+			// pathTaken will only be empty at (0,0)
+			if(this.pathTaken.isEmpty()) {
 				return null;
 			}
-			return this.pathOut.pop();
+			return this.pathTaken.pop();
 		} 
-		// If there are moves, stop backtracking and randomly explore one
-		this.retreating = false;
-		int  n = this.rand.nextInt(openMoves.size());
-		return openMoves.get(n);
-		
+		// If there are moves, stop backtracking and explore
+		this.backtracking = false;
+		return openMoves.get(0);
 	}
 	
 	// Gets the available Cells to move to from the current position
 	private ArrayList<Pair> getAvailableCells() {
 		ArrayList<Pair> result = new ArrayList<Pair>();
-			int row = this.currentPosition.row;
-			int col = this.currentPosition.col;
-			if(isPotentialCell(row - 1, col)) { result.add(new Pair(row - 1, col)); }
-			if(isPotentialCell(row + 1, col)) { result.add(new Pair(row + 1, col)); }
-			if(isPotentialCell(row, col - 1)) { result.add(new Pair(row, col - 1)); }
-			if(isPotentialCell(row, col + 1)) { result.add(new Pair(row, col + 1)); }
+
+		Pair[] surroundingCells = this.currentPosition.getSurroundingCells(this.direction);
+		for(int i = 0; i < surroundingCells.length; i++) {
+			if (isPotentialCell(surroundingCells[i].row, surroundingCells[i].col)) {
+				result.add(surroundingCells[i]);
+			}
+		}
 		return result;
 	}
 	
@@ -417,7 +490,7 @@ public class MyAI extends Agent
 	
 	// Checks if a cell is in bounds
 	private boolean inBounds(int row, int col) {
-		return !(row < 0 || col < 0 || col > COL_CAP - 1 || 
+		return !(row < 0 || col < 0 || col > COL_CAP - 1 ||
 				(this.lastRow != -1 && row > this.lastRow) ||
 				(this.lastCol != -1 && col > this.lastCol));
 	}
@@ -487,6 +560,52 @@ public class MyAI extends Agent
 			if(!this.wumpusSpottings.add(p)) {
 				this.wumpusLocation = p;
 			}
+		}
+	}
+	
+	// Traverses the internal map of the cave to find the fastest way out, using BFS
+	private void getOptimalPathOut() {
+		Queue<Pair> queue = new LinkedList<Pair>();
+		Set<Pair> visited = new HashSet<Pair>();
+		// Stores the move needed to get from a child cell to a parent cell
+		Map<Pair, Pair> moves = new HashMap<Pair, Pair>();
+		queue.add(this.currentPosition);
+		moves.put(this.currentPosition, null);
+		Pair parent;
+		Pair[] surroundingCells;
+		while (!queue.isEmpty()) {
+			parent = queue.poll();
+			// When we've reached the target (the exit Cell 0, 0), construct
+			// a Stack describing the path out
+			if(parent.row == 0 && parent.col == 0) {
+				buildPath(parent, moves);
+				return;
+			}
+			surroundingCells = parent.getSurroundingCells(this.direction);
+			for(int i = 0; i < surroundingCells.length; i++) {
+				if (visited.contains(surroundingCells[i])) {
+					continue;
+				}
+				if (inBounds(surroundingCells[i].row, surroundingCells[i].col) && 
+						surroundingCells[i].row < this.map.getRowSize() && 
+						this.map.getCell(surroundingCells[i]).isSafe()) {
+					moves.put(surroundingCells[i], parent);
+					queue.add(surroundingCells[i]);
+				}
+				
+			}
+			visited.add(parent);
+		}
+	}
+	
+	// Given a map of parent-child moves and the final destination Cell,
+	// work backward to create a Stack describing the shortest way out
+	private void buildPath(Pair p, Map<Pair, Pair> moves) {
+		this.pathOut = new Stack<Pair>();
+		Pair target = p;
+		while(target != this.currentPosition) {
+			this.pathOut.push(target);
+			target = moves.get(target);
 		}
 	}
 }
