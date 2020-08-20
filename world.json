@@ -1,0 +1,68 @@
+{
+  "name": "dungeons-and-dumbasses",
+  "title": "Dungeons & Dumbasses",
+  "description": "<p>Welcome to the wonderful world of Thedas, where we specifically set our sights on the enormous continent of Ephos. Here we join our heroes in a land ravaged by ever-increasing troubles, from monster raids to evil painters to political scandals and more--not to mention the impending Ruin which threatens to destroy life on the planet as we know it.</p>",
+  "version": "1.0.0",
+  "minimumCoreVersion": "0.0.0",
+  "compatibleCoreVersion": "1.0.0",
+  "scripts": [],
+  "esmodules": [],
+  "styles": [],
+  "packs": [
+    {
+      "entity": "Item",
+      "label": "My DDB Spells",
+      "name": "ddb-spells",
+      "package": "world",
+      "path": "packs/ddb-spells.db",
+      "system": "dnd5e",
+      "absPath": "E:\\FoundryVTTData\\Data\\worlds\\dungeons-and-dumbasses\\packs\\ddb-spells.db"
+    },
+    {
+      "entity": "Item",
+      "label": "My DDB Items",
+      "name": "ddb-items",
+      "package": "world",
+      "path": "packs/ddb-items.db",
+      "system": "dnd5e",
+      "absPath": "E:\\FoundryVTTData\\Data\\worlds\\dungeons-and-dumbasses\\packs\\ddb-items.db"
+    },
+    {
+      "entity": "Actor",
+      "label": "My DDB Monsters",
+      "name": "ddb-monsters",
+      "package": "world",
+      "path": "packs/ddb-monsters.db",
+      "system": "dnd5e",
+      "absPath": "E:\\FoundryVTTData\\Data\\worlds\\dungeons-and-dumbasses\\packs\\ddb-monsters.db"
+    },
+    {
+      "entity": "Item",
+      "label": "My DDB Features",
+      "name": "dungeons-and-dumbasses-ddb-features",
+      "package": "world",
+      "path": "packs/dungeons-and-dumbasses-ddb-features.db",
+      "system": "dnd5e",
+      "absPath": "E:\\FoundryVTTData\\Data\\worlds\\dungeons-and-dumbasses\\packs\\dungeons-and-dumbasses-ddb-features.db"
+    }
+  ],
+  "languages": [],
+  "authors": [],
+  "keywords": [],
+  "socket": false,
+  "url": "",
+  "manifest": "",
+  "download": "",
+  "license": "",
+  "readme": "",
+  "bugs": "",
+  "changelog": "",
+  "background": "E:\\FoundryVTTData\\mg.png",
+  "system": "dnd5e",
+  "coreVersion": "0.6.5",
+  "systemVersion": 0.94,
+  "nextSession": "2020-07-31T18:00",
+  "availability": 0,
+  "unavailable": false,
+  "id": "dungeons-and-dumbasses"
+}
